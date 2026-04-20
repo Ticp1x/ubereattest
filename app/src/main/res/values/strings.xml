@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">UberEats 利润</string>
+    <string name="settings_title">阈值设置</string>
+
+    <string name="status_running">悬浮窗已开启</string>
+    <string name="status_stopped">悬浮窗已关闭</string>
+
+    <string name="btn_start">启动悬浮窗</string>
+    <string name="btn_stop">关闭悬浮窗</string>
+    <string name="btn_settings">阈值设置</string>
+
+    <string name="perm_overlay_title">需要"悬浮窗"权限</string>
+    <string name="perm_overlay_msg">请在系统设置中授权本应用显示悬浮窗，然后返回启动服务。</string>
+    <string name="perm_go">去授权</string>
+    <string name="perm_cancel">取消</string>
+
+    <string name="calc_title">接单决策</string>
+    <string name="calc_payout_hint">收入 (CA$)</string>
+    <string name="calc_km_hint">公里</string>
+    <string name="calc_min_hint">分钟</string>
+    <string name="calc_btn">计算</string>
+    <string name="calc_close">关闭</string>
+    <string name="calc_reset">清空</string>
+
+    <string name="result_go">接！好单</string>
+    <string name="result_hold">看机会</string>
+    <string name="result_no">拒！烂单</string>
+
+    <string name="notif_channel_name">悬浮窗服务</string>
+    <string name="notif_title">UberEats 利润计算器运行中</string>
+    <string name="notif_text">点击图标展开计算窗口</string>
+
+    <string name="settings_per_km">每公里最低 ($/km)</string>
+    <string name="settings_per_min">每分钟最低 ($/min)</string>
+    <string name="settings_min_payout">单价最低 ($)</string>
+    <string name="settings_cost_per_km">每公里成本 ($/km)</string>
+    <string name="settings_reset">恢复默认</string>
+</resources>

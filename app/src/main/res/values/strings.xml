@@ -36,4 +36,19 @@
     <string name="settings_min_payout">单价最低 ($)</string>
     <string name="settings_cost_per_km">每公里成本 ($/km)</string>
     <string name="settings_reset">恢复默认</string>
+
+    <string name="mark_accepted">已接单</string>
+    <string name="mark_rejected">已拒单</string>
+    <string name="stage_normal">正常</string>
+    <string name="stage_warn">预警</string>
+    <string name="stage_hungry">饥饿</string>
+    <string name="stage_starving">极饥饿</string>
+    <string name="stage_busy">送单中</string>
+
+    <string name="btn_history">订单历史</string>
+    <string name="btn_reset_timer">重置等单计时</string>
+    <string name="history_title">订单历史</string>
+    <string name="history_empty">还没有记录。计算一单后点击&#8220;已接/已拒&#8221;就会出现在这里。</string>
+    <string name="history_export">导出 CSV</string>
+    <string name="history_clear">清空历史</string>
 </resources>

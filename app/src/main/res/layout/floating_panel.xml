@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="300dp"
+    android:layout_width="320dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/panel_background"
@@ -32,11 +32,22 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/stageBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:background="@drawable/chip_background"
+        android:textSize="13sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/text_primary" />
+
     <EditText
         android:id="@+id/payoutInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="10dp"
         android:hint="@string/calc_payout_hint"
         android:inputType="numberDecimal"
         android:textSize="16sp"
@@ -139,6 +150,33 @@
             android:layout_marginTop="6dp"
             android:textSize="13sp"
             android:textColor="@color/text_secondary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/rejectBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/mark_rejected"
+                style="?attr/materialButtonOutlinedStyle" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="match_parent" />
+
+            <Button
+                android:id="@+id/acceptBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/mark_accepted" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

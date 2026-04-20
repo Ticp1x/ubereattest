@@ -11,7 +11,9 @@ import android.content.Intent
 import android.content.res.Resources
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -40,6 +42,17 @@ class FloatingService : Service() {
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
 
+    private val handler = Handler(Looper.getMainLooper())
+    private var currentRecordTimestamp: Long? = null
+    private var currentRecordMinutes: Double = 0.0
+
+    private val stageTicker = object : Runnable {
+        override fun run() {
+            updateStageBanner()
+            handler.postDelayed(this, 15_000)
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -53,6 +66,7 @@ class FloatingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        handler.removeCallbacks(stageTicker)
         removeView(bubbleView); bubbleView = null
         removeView(panelView); panelView = null
     }
@@ -140,11 +154,11 @@ class FloatingService : Service() {
 
     // ==========  PANEL  ==========
 
-    @SuppressLint("InflateParams")
+    @SuppressLint("InflateParams", "ClickableViewAccessibility")
     private fun showPanel() {
         val view = LayoutInflater.from(this).inflate(R.layout.floating_panel, null)
         val lp = baseParams(focusable = true).apply {
-            width = dp(300); height = WindowManager.LayoutParams.WRAP_CONTENT
+            width = dp(320); height = WindowManager.LayoutParams.WRAP_CONTENT
             gravity = Gravity.TOP or Gravity.START
             val b = bubbleParams
             x = (b?.x ?: dp(12)) + dp(60)
@@ -165,6 +179,12 @@ class FloatingService : Service() {
         val verdictText = view.findViewById<TextView>(R.id.verdictText)
         val metricsText = view.findViewById<TextView>(R.id.metricsText)
         val reasonText = view.findViewById<TextView>(R.id.reasonText)
+        val acceptBtn = view.findViewById<android.widget.Button>(R.id.acceptBtn)
+        val rejectBtn = view.findViewById<android.widget.Button>(R.id.rejectBtn)
+
+        updateStageBanner()
+        handler.removeCallbacks(stageTicker)
+        handler.postDelayed(stageTicker, 15_000)
 
         closeBtn.setOnClickListener { hidePanel() }
 
@@ -173,6 +193,7 @@ class FloatingService : Service() {
             kmInput.setText("")
             minInput.setText("")
             resultBlock.visibility = View.GONE
+            currentRecordTimestamp = null
             payoutInput.requestFocus()
         }
 
@@ -188,8 +209,10 @@ class FloatingService : Service() {
                 resultBlock.visibility = View.VISIBLE
                 return@calc
             }
-            val t = Prefs.load(this)
-            val d = Calculator.analyze(p, k, m, t)
+            val base = Prefs.load(this)
+            val idleSec = TimerState.idleSeconds(this)
+            val stage = Stage.fromIdleMinutes((idleSec / 60).toInt())
+            val d = Calculator.analyze(p, k, m, base, stage)
 
             verdictText.text = when (d.verdict) {
                 Verdict.GO -> getString(R.string.result_go)
@@ -201,13 +224,29 @@ class FloatingService : Service() {
                 Verdict.HOLD -> R.drawable.result_hold
                 Verdict.NO -> R.drawable.result_no
             })
+            val eff = d.effectiveThresholds
             metricsText.text = buildString {
-                append("\$/km   ${"%.2f".format(d.perKm)}  （门槛 ${"%.2f".format(t.perKm)})\n")
-                append("\$/min  ${"%.2f".format(d.perMin)}  （门槛 ${"%.2f".format(t.perMin)})\n")
+                append("\$/km   ${"%.2f".format(d.perKm)}  (阶段门槛 ${"%.2f".format(eff.perKm)})\n")
+                append("\$/min  ${"%.2f".format(d.perMin)}  (阶段门槛 ${"%.2f".format(eff.perMin)})\n")
                 append("净利润 \$${"%.2f".format(d.netProfit)}\n")
                 append("折算时薪 \$${"%.1f".format(d.netHourly)}/h")
             }
             reasonText.text = d.reason
+
+            val ts = System.currentTimeMillis()
+            val record = OrderRecord(
+                timestamp = ts,
+                payout = p, km = k, minutes = m,
+                perKm = d.perKm, perMin = d.perMin,
+                netProfit = d.netProfit, netHourly = d.netHourly,
+                verdict = d.verdict, choice = Choice.UNDECIDED,
+                idleSecondsBefore = idleSec,
+                stageLabel = d.stage.label
+            )
+            OrderHistory.append(this, record)
+            currentRecordTimestamp = ts
+            currentRecordMinutes = m
+
             resultBlock.visibility = View.VISIBLE
             hideKeyboard(view)
         }
@@ -218,12 +257,55 @@ class FloatingService : Service() {
             } else false
         }
 
+        acceptBtn.setOnClickListener {
+            val ts = currentRecordTimestamp ?: return@setOnClickListener
+            OrderHistory.updateChoice(this, ts, Choice.ACCEPTED)
+            TimerState.markAccepted(this, currentRecordMinutes)
+            currentRecordTimestamp = null
+            android.widget.Toast.makeText(this, "已记录：接单", android.widget.Toast.LENGTH_SHORT).show()
+            updateStageBanner()
+            hidePanel()
+        }
+
+        rejectBtn.setOnClickListener {
+            val ts = currentRecordTimestamp ?: return@setOnClickListener
+            OrderHistory.updateChoice(this, ts, Choice.REJECTED)
+            TimerState.markRejected(this)
+            currentRecordTimestamp = null
+            android.widget.Toast.makeText(this, "已记录：拒单", android.widget.Toast.LENGTH_SHORT).show()
+            updateStageBanner()
+            hidePanel()
+        }
+
         payoutInput.requestFocus()
     }
 
     private fun hidePanel() {
+        handler.removeCallbacks(stageTicker)
         removeView(panelView)
         panelView = null
+        currentRecordTimestamp = null
+    }
+
+    private fun updateStageBanner() {
+        val view = panelView ?: return
+        val banner = view.findViewById<TextView>(R.id.stageBanner) ?: return
+        val isBusy = TimerState.isBusy(this)
+        if (isBusy) {
+            val rem = TimerState.busyRemainingSeconds(this)
+            val m = rem / 60; val s = rem % 60
+            banner.text = "送单中 · 剩余 ${m}m ${s}s"
+            return
+        }
+        val idleSec = TimerState.idleSeconds(this)
+        val stage = Stage.fromIdleMinutes((idleSec / 60).toInt())
+        val m = idleSec / 60; val s = idleSec % 60
+        val base = Prefs.load(this)
+        val eff = stage.applyTo(base)
+        banner.text = if (stage == Stage.STARVING)
+            "等单 ${m}m${s}s · 阶段 ${stage.label} · 接任何非负单"
+        else
+            "等单 ${m}m${s}s · 阶段 ${stage.label} · 门槛 \$${"%.2f".format(eff.perKm)}/km · \$${"%.2f".format(eff.minPayout)}/单"
     }
 
     // ==========  HELPERS  ==========

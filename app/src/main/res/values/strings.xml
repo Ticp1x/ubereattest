@@ -10,7 +10,7 @@
     <string name="btn_stop">关闭悬浮窗</string>
     <string name="btn_settings">阈值设置</string>
 
-    <string name="perm_overlay_title">需要"悬浮窗"权限</string>
+    <string name="perm_overlay_title">需要&#8220;悬浮窗&#8221;权限</string>
     <string name="perm_overlay_msg">请在系统设置中授权本应用显示悬浮窗，然后返回启动服务。</string>
     <string name="perm_go">去授权</string>
     <string name="perm_cancel">取消</string>

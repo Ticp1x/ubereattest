@@ -77,7 +77,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:lineSpacingExtra="4dp"
-            android:text="1. 点"启动悬浮窗"，允许"在其他应用上层显示"权限\n2. 悬浮球会一直漂在屏幕上（可拖动）\n3. Uber 派单来了，看一眼订单金额 / 公里 / 分钟\n4. 点悬浮球 → 输入 3 个数 → 立刻看到 Go/No-Go\n5. 不想用时点"关闭悬浮窗"或状态栏通知关闭"
+            android:text="1. 点&#8220;启动悬浮窗&#8221;，允许&#8220;在其他应用上层显示&#8221;权限\n2. 悬浮球会一直漂在屏幕上（可拖动）\n3. Uber 派单来了，看一眼订单金额 / 公里 / 分钟\n4. 点悬浮球 → 输入 3 个数 → 立刻看到 Go/No-Go\n5. 不想用时点&#8220;关闭悬浮窗&#8221;或状态栏通知关闭"
             android:textSize="13sp"
             android:textColor="@color/text_secondary" />
 

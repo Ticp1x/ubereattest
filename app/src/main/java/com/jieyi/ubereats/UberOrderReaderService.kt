@@ -20,11 +20,15 @@ class UberOrderReaderService : AccessibilityService() {
     companion object {
         private const val TAG = "UberReader"
         private const val DEBOUNCE_MS = 300L
+        // 调试开关：true 时对 com.ubercab.* 所有窗口事件都打 preview 日志，用于诊断派单弹窗读不到的问题
+        private const val DEBUG_UBER = true
+        private const val PREVIEW_LEN = 500
 
         private val PRICE_RE = Regex("""(?:CA)?\$\s*([0-9]+(?:\.[0-9]{1,2})?)""")
         private val MIN_RE = Regex("""([0-9]+)\s*(?:分钟|minutes?|min)\b""", RegexOption.IGNORE_CASE)
         private val KM_RE = Regex("""([0-9]+(?:\.[0-9]+)?)\s*(?:公里|km|kilometers?)\b""", RegexOption.IGNORE_CASE)
         private val ACCEPT_MARKERS = listOf("接受", "Accept", "派送", "专属优惠")
+        private val UBER_PKG_PREFIXES = listOf("com.ubercab")
 
         @Volatile
         var isRunning: Boolean = false
@@ -33,6 +37,7 @@ class UberOrderReaderService : AccessibilityService() {
 
     private var lastFingerprint: String = ""
     private var lastEventMs: Long = 0L
+    private var lastDebugFingerprint: String = ""
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -68,13 +73,25 @@ class UberOrderReaderService : AccessibilityService() {
             return
         }
         val flat = buf.toString()
+        val pkg = event.packageName?.toString() ?: "?"
+        val isUber = UBER_PKG_PREFIXES.any { pkg.startsWith(it) }
+
+        // DEBUG：对 Uber 全家桶所有事件都留脚印，文本去重避免刷屏
+        if (DEBUG_UBER && isUber) {
+            val preview = flat.take(PREVIEW_LEN).replace('\n', ' ').replace('\r', ' ')
+            val dbgFp = "$pkg|${flat.length}|${preview.take(60)}"
+            if (dbgFp != lastDebugFingerprint) {
+                lastDebugFingerprint = dbgFp
+                val typeName = AccessibilityEvent.eventTypeToString(type)
+                Log.i(TAG, "[DBG] pkg=$pkg evt=$typeName len=${flat.length} text=$preview")
+            }
+        }
 
         // 只对"含价格 + 含接受标志"的画面出手，减少噪音
         val hasPrice = flat.contains("$")
         val hasMarker = ACCEPT_MARKERS.any { flat.contains(it) }
         if (!hasPrice || !hasMarker) return
 
-        val pkg = event.packageName?.toString() ?: "?"
         val priceM = PRICE_RE.find(flat)
         val kmM = KM_RE.find(flat)
         val minM = MIN_RE.find(flat)

@@ -43,6 +43,21 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.historyBtn).setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
+        findViewById<Button>(R.id.accessibilityBtn).setOnClickListener {
+            val label = if (UberOrderReaderService.isRunning) "已开启 · 再次点击可调整" else "未开启"
+            AlertDialog.Builder(this)
+                .setTitle(R.string.btn_accessibility)
+                .setMessage("当前状态：$label\n\n打开系统设置 → 无障碍 → 找到「UberEats 订单读取」→ 启用。\n\n用途：Uber Driver 派单弹窗出现时自动读取价格/公里/分钟，Toast 显示接/看/拒。")
+                .setPositiveButton(R.string.perm_go) { _, _ ->
+                    try {
+                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, "无法打开无障碍设置，请手动进入", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton(R.string.perm_cancel, null)
+                .show()
+        }
         findViewById<Button>(R.id.resetTimerBtn).setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle(R.string.btn_reset_timer)

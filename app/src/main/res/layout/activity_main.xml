@@ -71,6 +71,13 @@
             android:text="@string/btn_reset_timer"
             style="?attr/materialButtonOutlinedStyle" />
 
+        <Button
+            android:id="@+id/accessibilityBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_accessibility"
+            style="?attr/materialButtonOutlinedStyle" />
+
         <TextView
             android:id="@+id/idleText"
             android:layout_width="match_parent"

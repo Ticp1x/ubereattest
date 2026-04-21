@@ -51,4 +51,8 @@
     <string name="history_empty">还没有记录。计算一单后点击&#8220;已接/已拒&#8221;就会出现在这里。</string>
     <string name="history_export">导出 CSV</string>
     <string name="history_clear">清空历史</string>
+
+    <string name="accessibility_service_label">UberEats 订单读取</string>
+    <string name="accessibility_service_description">读取 Uber 派单弹窗的价格/距离/时间并自动判定是否值得接</string>
+    <string name="btn_accessibility">自动读单（无障碍）</string>
 </resources>

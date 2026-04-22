@@ -64,17 +64,52 @@ class UberOrderReaderService : AccessibilityService() {
         if (now - lastEventMs < DEBOUNCE_MS) return
         lastEventMs = now
 
+        val pkg = event.packageName?.toString() ?: "?"
+        val isUber = UBER_PKG_PREFIXES.any { pkg.startsWith(it) }
+
         val buf = StringBuilder()
         try {
-            // 遍历所有 visible window（需 flagRetrieveInteractiveWindows flag）
-            // 派单弹窗是独立 popup window，rootInActiveWindow 抓不到
+            // 1. 遍历所有 visible window（需 flagRetrieveInteractiveWindows flag）
             val allWindows = windows ?: emptyList()
+            if (DEBUG_UBER && isUber) {
+                Log.i(TAG, "[WINS] count=${allWindows.size} eventPkg=$pkg")
+                for (w in allWindows) {
+                    val r = w.root
+                    val title = w.title?.toString() ?: "?"
+                    val rootPkg = r?.packageName?.toString() ?: "NULL"
+                    val rootChildren = r?.childCount ?: -1
+                    Log.i(TAG, "[WIN] id=${w.id} type=${w.type} layer=${w.layer} focus=${w.isFocused} active=${w.isActive} title='$title' rootPkg=$rootPkg rootChildren=$rootChildren")
+                }
+            }
             for (w in allWindows) {
                 w.root?.let { collectText(it, buf) }
             }
-            // fallback：windows API 返回空时回退到旧逻辑
+            // 2. fallback: rootInActiveWindow
             if (buf.isEmpty()) {
-                rootInActiveWindow?.let { collectText(it, buf) }
+                val riaw = rootInActiveWindow
+                if (DEBUG_UBER && isUber) {
+                    Log.i(TAG, "[RIAW] null=${riaw == null} pkg=${riaw?.packageName} children=${riaw?.childCount}")
+                }
+                riaw?.let { collectText(it, buf) }
+            }
+            // 3. fallback: event.source 爬到 root（权限独立于 windows API）
+            if (buf.isEmpty()) {
+                val src = event.source
+                if (DEBUG_UBER && isUber) {
+                    Log.i(TAG, "[EVSRC] null=${src == null}")
+                }
+                if (src != null) {
+                    var r: AccessibilityNodeInfo = src
+                    var depth = 0
+                    while (r.parent != null && depth < 50) {
+                        r = r.parent
+                        depth++
+                    }
+                    if (DEBUG_UBER && isUber) {
+                        Log.i(TAG, "[EVSRC_ROOT] pkg=${r.packageName} children=${r.childCount} depth=$depth")
+                    }
+                    collectText(r, buf)
+                }
             }
         } catch (e: Throwable) {
             Log.w(TAG, "collectText failed: ${e.message}")
@@ -82,8 +117,6 @@ class UberOrderReaderService : AccessibilityService() {
         }
         if (buf.isEmpty()) return
         val flat = buf.toString()
-        val pkg = event.packageName?.toString() ?: "?"
-        val isUber = UBER_PKG_PREFIXES.any { pkg.startsWith(it) }
 
         // DEBUG：对 Uber 全家桶所有事件都留脚印，文本去重避免刷屏
         if (DEBUG_UBER && isUber) {

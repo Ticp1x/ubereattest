@@ -34,7 +34,34 @@ class FloatingService : Service() {
             private set
         private const val CHANNEL_ID = "uep_floating"
         private const val NOTIF_ID = 1001
+
+        const val ACTION_SET_VERDICT = "com.jieyi.ubereats.FLOATING_SET_VERDICT"
+        const val EXTRA_VERDICT = "verdict"
+        const val EXTRA_PRICE = "price"
+        const val EXTRA_KM = "km"
+        const val EXTRA_MIN = "min"
+        const val EXTRA_PER_KM = "perKm"
+        const val EXTRA_NET_PROFIT = "netProfit"
+
+        private const val VERDICT_DISPLAY_MS = 8000L
+
+        /** 外部路径（OCR/Accessibility）识别完一单 → 通知悬浮球变色。 */
+        fun postVerdict(ctx: Context, price: Double, km: Double, minutes: Double, d: Decision) {
+            if (!isRunning) return
+            val i = Intent(ctx, FloatingService::class.java).apply {
+                action = ACTION_SET_VERDICT
+                putExtra(EXTRA_VERDICT, d.verdict.name)
+                putExtra(EXTRA_PRICE, price)
+                putExtra(EXTRA_KM, km)
+                putExtra(EXTRA_MIN, minutes)
+                putExtra(EXTRA_PER_KM, d.perKm)
+                putExtra(EXTRA_NET_PROFIT, d.netProfit)
+            }
+            try { ctx.startService(i) } catch (_: Throwable) {}
+        }
     }
+
+    private val idleRestoreRunnable = Runnable { restoreIdleBubble() }
 
     private lateinit var wm: WindowManager
     private var bubbleView: View? = null
@@ -55,6 +82,48 @@ class FloatingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_SET_VERDICT) {
+            handleVerdict(intent)
+        }
+        return START_STICKY
+    }
+
+    private fun handleVerdict(intent: Intent) {
+        val verdictName = intent.getStringExtra(EXTRA_VERDICT) ?: return
+        val verdict = runCatching { Verdict.valueOf(verdictName) }.getOrNull() ?: return
+        showVerdictOnBubble(verdict)
+        handler.removeCallbacks(idleRestoreRunnable)
+        handler.postDelayed(idleRestoreRunnable, VERDICT_DISPLAY_MS)
+    }
+
+    private fun showVerdictOnBubble(v: Verdict) {
+        val view = bubbleView ?: return
+        val bg = when (v) {
+            Verdict.GO -> R.drawable.bubble_go
+            Verdict.HOLD -> R.drawable.bubble_hold
+            Verdict.NO -> R.drawable.bubble_no
+        }
+        val label = when (v) {
+            Verdict.GO -> "接"
+            Verdict.HOLD -> "看"
+            Verdict.NO -> "拒"
+        }
+        view.setBackgroundResource(bg)
+        view.findViewById<ImageView>(R.id.bubbleIcon)?.visibility = View.GONE
+        view.findViewById<TextView>(R.id.bubbleText)?.apply {
+            text = label
+            visibility = View.VISIBLE
+        }
+    }
+
+    private fun restoreIdleBubble() {
+        val view = bubbleView ?: return
+        view.setBackgroundResource(R.drawable.bubble_idle)
+        view.findViewById<ImageView>(R.id.bubbleIcon)?.visibility = View.VISIBLE
+        view.findViewById<TextView>(R.id.bubbleText)?.visibility = View.GONE
+    }
+
     override fun onCreate() {
         super.onCreate()
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -67,6 +136,7 @@ class FloatingService : Service() {
         super.onDestroy()
         isRunning = false
         handler.removeCallbacks(stageTicker)
+        handler.removeCallbacks(idleRestoreRunnable)
         removeView(bubbleView); bubbleView = null
         removeView(panelView); panelView = null
     }

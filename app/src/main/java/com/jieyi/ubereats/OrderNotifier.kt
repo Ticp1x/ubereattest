@@ -16,6 +16,12 @@ object OrderNotifier {
     }
 
     fun notify(ctx: Context, price: Double, km: Double, minutes: Double, d: Decision) {
+        // 优先：悬浮球变色 + 显示「接/看/拒」大字，最显眼
+        if (FloatingService.isRunning) {
+            FloatingService.postVerdict(ctx, price, km, minutes, d)
+            return
+        }
+        // Fallback：屏幕顶部横条浮窗（悬浮球没启动时）
         val tag = when (d.verdict) {
             Verdict.GO -> "接"
             Verdict.HOLD -> "看"

@@ -64,14 +64,23 @@ class UberOrderReaderService : AccessibilityService() {
         if (now - lastEventMs < DEBOUNCE_MS) return
         lastEventMs = now
 
-        val root = rootInActiveWindow ?: return
         val buf = StringBuilder()
         try {
-            collectText(root, buf)
+            // 遍历所有 visible window（需 flagRetrieveInteractiveWindows flag）
+            // 派单弹窗是独立 popup window，rootInActiveWindow 抓不到
+            val allWindows = windows ?: emptyList()
+            for (w in allWindows) {
+                w.root?.let { collectText(it, buf) }
+            }
+            // fallback：windows API 返回空时回退到旧逻辑
+            if (buf.isEmpty()) {
+                rootInActiveWindow?.let { collectText(it, buf) }
+            }
         } catch (e: Throwable) {
             Log.w(TAG, "collectText failed: ${e.message}")
             return
         }
+        if (buf.isEmpty()) return
         val flat = buf.toString()
         val pkg = event.packageName?.toString() ?: "?"
         val isUber = UBER_PKG_PREFIXES.any { pkg.startsWith(it) }

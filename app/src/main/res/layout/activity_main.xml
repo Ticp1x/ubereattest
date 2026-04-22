@@ -78,6 +78,20 @@
             android:text="@string/btn_accessibility"
             style="?attr/materialButtonOutlinedStyle" />
 
+        <Button
+            android:id="@+id/ocrBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_ocr"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/ocrTestBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_ocr_test"
+            style="?attr/materialButtonOutlinedStyle" />
+
         <TextView
             android:id="@+id/idleText"
             android:layout_width="match_parent"

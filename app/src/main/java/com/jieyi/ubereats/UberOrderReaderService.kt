@@ -1,6 +1,7 @@
 package com.jieyi.ubereats
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -38,6 +39,7 @@ class UberOrderReaderService : AccessibilityService() {
     private var lastFingerprint: String = ""
     private var lastEventMs: Long = 0L
     private var lastDebugFingerprint: String = ""
+    private var lastCaptureTriggerMs: Long = 0L
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -66,6 +68,24 @@ class UberOrderReaderService : AccessibilityService() {
 
         val pkg = event.packageName?.toString() ?: "?"
         val isUber = UBER_PKG_PREFIXES.any { pkg.startsWith(it) }
+
+        // 触发截屏 OCR：Uber 窗口状态变化时（派单弹窗出现也是 STATE_CHANGED），
+        // 交给 ScreenCaptureService 独立跑一遍 OCR。仅当用户启用了截屏 OCR 才生效。
+        // 500ms 去抖避免频繁截屏；STATE_CHANGED 远少于 CONTENT_CHANGED，只监听前者已够。
+        if (isUber &&
+            type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            ScreenCaptureService.isRunning) {
+            if (now - lastCaptureTriggerMs > 500L) {
+                lastCaptureTriggerMs = now
+                try {
+                    startService(Intent(this, ScreenCaptureService::class.java).apply {
+                        action = ScreenCaptureService.ACTION_CAPTURE
+                    })
+                } catch (e: Throwable) {
+                    Log.w(TAG, "trigger capture failed: ${e.message}")
+                }
+            }
+        }
 
         val buf = StringBuilder()
         try {

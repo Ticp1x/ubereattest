@@ -1,6 +1,8 @@
 package com.jieyi.ubereats
 
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +12,7 @@ import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -24,6 +27,26 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             updateIdle()
             handler.postDelayed(this, 5_000)
+        }
+    }
+
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK && result.data != null) {
+            val intent = Intent(this, ScreenCaptureService::class.java).apply {
+                action = ScreenCaptureService.ACTION_START
+                putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, result.data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(this, intent)
+            } else {
+                startService(intent)
+            }
+            Toast.makeText(this, "截屏 OCR 已启用", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "已取消录屏授权", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -58,6 +81,8 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton(R.string.perm_cancel, null)
                 .show()
         }
+        findViewById<Button>(R.id.ocrBtn).setOnClickListener { askOcrPermission() }
+        findViewById<Button>(R.id.ocrTestBtn).setOnClickListener { triggerOcrCaptureOnce() }
         findViewById<Button>(R.id.resetTimerBtn).setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle(R.string.btn_reset_timer)
@@ -141,6 +166,48 @@ class MainActivity : AppCompatActivity() {
     private fun stopFloating() {
         stopService(Intent(this, FloatingService::class.java))
         statusText.postDelayed({ updateStatus() }, 200)
+    }
+
+    private fun askOcrPermission() {
+        if (ScreenCaptureService.isRunning) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.btn_ocr)
+                .setMessage("已启用。\n\n如需关闭：长按通知栏「自动读单已启用」→ 停止。")
+                .setPositiveButton("知道了", null)
+                .setNeutralButton("现在停止") { _, _ ->
+                    val i = Intent(this, ScreenCaptureService::class.java).apply {
+                        action = ScreenCaptureService.ACTION_STOP
+                    }
+                    startService(i)
+                }
+                .show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.ocr_perm_title)
+            .setMessage(R.string.ocr_perm_msg)
+            .setPositiveButton(R.string.perm_go) { _, _ ->
+                val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                try {
+                    mediaProjectionLauncher.launch(mpm.createScreenCaptureIntent())
+                } catch (e: Exception) {
+                    Toast.makeText(this, "无法启动录屏授权：${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(R.string.perm_cancel, null)
+            .show()
+    }
+
+    private fun triggerOcrCaptureOnce() {
+        if (!ScreenCaptureService.isRunning) {
+            Toast.makeText(this, "先点上一个按钮启用截屏 OCR", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val i = Intent(this, ScreenCaptureService::class.java).apply {
+            action = ScreenCaptureService.ACTION_CAPTURE
+        }
+        startService(i)
+        Toast.makeText(this, "已触发一次截屏 → 看 Toast 或日志 (adb logcat -s OcrHelper ScreenCapture)", Toast.LENGTH_LONG).show()
     }
 
     private fun askOverlayPermission() {

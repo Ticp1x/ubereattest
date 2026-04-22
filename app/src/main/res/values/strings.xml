@@ -55,4 +55,8 @@
     <string name="accessibility_service_label">UberEats 订单读取</string>
     <string name="accessibility_service_description">读取 Uber 派单弹窗的价格/距离/时间并自动判定是否值得接</string>
     <string name="btn_accessibility">自动读单（无障碍）</string>
+    <string name="btn_ocr">自动读单（截屏 OCR）</string>
+    <string name="btn_ocr_test">测试截屏 OCR（手动）</string>
+    <string name="ocr_perm_title">需要&#8220;屏幕录制&#8221;权限</string>
+    <string name="ocr_perm_msg">点确定后系统会弹出&#8220;开始录制或投射&#8221;授权框。\n\n原理：派单弹窗出现时截一张 → 本地 OCR 识别价格/公里/分钟 → 自动弹 Toast 判断。\n\n图像不上传，全部在手机里处理。授权到手机重启为止。</string>
 </resources>

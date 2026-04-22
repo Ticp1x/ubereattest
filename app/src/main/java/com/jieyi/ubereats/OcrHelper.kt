@@ -50,7 +50,7 @@ object OcrHelper {
                 }
                 if (ex.isOrder) {
                     val d = OrderNotifier.evaluate(ctx, ex.price!!, ex.km!!, ex.minutes!!)
-                    OrderNotifier.toast(ctx, ex.price, ex.km, ex.minutes, d)
+                    OrderNotifier.notify(ctx, ex.price, ex.km, ex.minutes, d)
                 }
             }
         }

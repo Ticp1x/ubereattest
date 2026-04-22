@@ -185,18 +185,7 @@ class UberOrderReaderService : AccessibilityService() {
     }
 
     private fun evaluateAndNotify(price: Double, km: Double, minutes: Double) {
-        val base = Prefs.load(this)
-        val idleSec = TimerState.idleSeconds(this)
-        val stage = Stage.fromIdleMinutes((idleSec / 60).toInt())
-        val d = Calculator.analyze(price, km, minutes, base, stage)
-
-        val tag = when (d.verdict) {
-            Verdict.GO -> "接"
-            Verdict.HOLD -> "看"
-            Verdict.NO -> "拒"
-        }
-        val msg = "[$tag] \$${"%.2f".format(price)} · ${"%.1f".format(km)}km · ${minutes.toInt()}min " +
-                "→ ${"%.2f".format(d.perKm)}/km · 净\$${"%.2f".format(d.netProfit)}"
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        val d = OrderNotifier.evaluate(this, price, km, minutes)
+        OrderNotifier.notify(this, price, km, minutes, d)
     }
 }
